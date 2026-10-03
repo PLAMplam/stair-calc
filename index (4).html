@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free-Standing Stair Calculator (Cusens & Kuang Method)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Structural Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+        body { font-family: 'Sarabun', sans-serif; }
+        .font-mono { font-family: 'JetBrains+Mono', monospace; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; color: black !important; }
+            .print-break { page-break-before: always; }
+            .print-card { border: 1px solid #ccc !important; box-shadow: none !important; background: white !important; color: black !important; }
+            .print-text { color: black !important; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="h-full flex flex-col">
+
+<header class="no-print bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 text-white p-2 rounded-lg shadow-lg shadow-blue-500/20">
+                <i class="fa-solid fa-stairs text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight text-white">รายการคำนวณบันไดชานพักลอย (Free-Standing Stairs)</h1>
+                <p class="text-xs text-slate-400">วิธีพละงานความเครียด (Cusens & Kuang Strain-Energy Method) - ACI 318</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="window.print()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium rounded-lg transition flex items-center gap-2">
+                <i class="fa-solid fa-print"></i> <span class="hidden sm:inline">พิมพ์รายงาน</span>
+            </button>
+            <button onclick="exportToGitHubReadme()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition flex items-center gap-2 shadow-md shadow-emerald-600/20">
+                <i class="fa-brands fa-github"></i> <span class="hidden sm:inline">คัดลอก README.md</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <section class="no-print lg:col-span-4 bg-slate-800 border border-slate-700/80 rounded-2xl p-5 space-y-6 overflow-y-auto max-h-[calc(100vh-100px)]">
+        <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+            <h2 class="font-semibold text-slate-100 flex items-center gap-2">
+                <i class="fa-solid fa-sliders text-blue-400"></i> พารามิเตอร์ออกแบบ (Inputs)
+            </h2>
+            <button onclick="resetDefaults()" class="text-xs text-slate-400 hover:text-blue-400 transition">
+                <i class="fa-solid fa-rotate-left"></i> รีเซ็ตค่า
+            </button>
+        </div>
+
+        <!-- Material Properties -->
+        <div class="space-y-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-blue-400">1. กำลังวัสดุ (Materials)</h3>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">f'c (กก./ตร.ซม.)</label>
+                    <input type="number" id="fc" value="240" oninput="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">fy (กก./ตร.ซม.)</label>
+                    <input type="number" id="fy" value="4000" oninput="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- Stair Geometry -->
+        <div class="space-y-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-blue-400">2. ขนาดมิติบันได (Geometry)</h3>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">กว้างบันได b (ม.)</label>
+                    <input type="number" id="b" value="1.50" step="0.05" oninput="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">กึ่งกลาง b1 (ม.)</label>
+                    <input type="number" id="b1" value="1.70" step="0.05" oninput="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">สูงระหว่างชั้น H (ม.)</label>
+                    <input type="number" id="H" value="3.60" step="0.1" oninput="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">ลูกนอน Tr (ม.)</label>
+                    <input type="number" id="Tr" value="0.30" step="0.01" oninput="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">ลูกตั้ง Ri (ม.)</label>
+                    <input type="number" id="Ri" value="0.18" step="0.01" oninput="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">หนาชานพัก hl (ม.)</label>
+                    <input type="number" id="hl" value="0.15" step="0.01" oninput="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">หนาแม่บันได hf (ม.)</label>
+                    <input type="number" id="hf" value="0.22" step="0.01" oninput="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">ระยะคอนกรีตหุ้ม (ซม.)</label>
+                    <input type="number" id="cover" value="2.0" step="0.5" oninput="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div class="space-y-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-blue-400">3. น้ำหนักบรรทุก (Loads)</h3>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">น้ำหนักจร LL (กก./ตร.ม.)</label>
+                    <input type="number" id="LL" value="300" step="10" oninput="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">น้ำหนักตกแต่ง SDL (กก./ตร.ม.)</label>
+                    <input type="number" id="SDL" value="0" step="10" oninput="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Rebar Controls -->
+        <div class="space-y-3 border-t border-slate-700 pt-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-amber-400">4. เหล็กเสริมขอบ (Dynamic Rebar)</h3>
+                <span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-mono">2-9 เส้น</span>
+            </div>
+            <div>
+                <label class="text-xs text-slate-300 block mb-1 flex justify-between">
+                    <span>จำนวนเหล็กขอบชานพัก/บันได (DB20)</span>
+                    <span id="edgeBarCountLabel" class="font-bold text-amber-400">4 เส้น</span>
+                </label>
+                <input type="range" id="edgeBarCount" min="2" max="9" value="4" step="1" oninput="calculate()" class="w-full accent-amber-500 cursor-pointer">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">เหล็กหลักชานพัก (DB)</label>
+                    <select id="mainBarLanding" onchange="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono text-white">
+                        <option value="12" selected>DB12 @ 0.15</option>
+                        <option value="16">DB16 @ 0.15</option>
+                        <option value="20">DB20 @ 0.15</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">เหล็กหลักบันได (DB)</label>
+                    <select id="mainBarStair" onchange="calculate()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono text-white">
+                        <option value="12" selected>DB12 @ 0.15</option>
+                        <option value="16">DB16 @ 0.15</option>
+                        <option value="20">DB20 @ 0.15</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-3 border-t border-slate-700 pt-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-blue-400">5. เงื่อนไขจุดรองรับ (Support Condition)</h3>
+            <div class="grid grid-cols-2 gap-3">
+                <label class="flex items-center gap-2 text-xs text-slate-200 cursor-pointer">
+                    <input type="radio" name="supportType" value="pin" onchange="calculate()" class="accent-blue-500">
+                    จุดหมุน (Pin Support)
+                </label>
+                <label class="flex items-center gap-2 text-xs text-slate-200 cursor-pointer">
+                    <input type="radio" name="supportType" value="fixed" checked onchange="calculate()" class="accent-blue-500">
+                    ยึดแน่น (Fixed Support)
+                </label>
+            </div>
+        </div>
+    </section>
+
+    <section class="lg:col-span-8 space-y-6">
+
+        <!-- Status Summary Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-3 text-center print-card">
+                <span class="text-xs text-slate-400 block mb-1">แรงดึงแนวราบ (H)</span>
+                <span id="statH" class="text-lg font-bold font-mono text-emerald-400">0 kg</span>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-3 text-center print-card">
+                <span class="text-xs text-slate-400 block mb-1">โมเมนต์บิดสูงสุด (T)</span>
+                <span id="statT" class="text-lg font-bold font-mono text-amber-400">0 kg-m</span>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-3 text-center print-card">
+                <span class="text-xs text-slate-400 block mb-1">โมเมนต์ดัดสูงสุด (Mv)</span>
+                <span id="statMv" class="text-lg font-bold font-mono text-blue-400">0 kg-m</span>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-3 text-center print-card">
+                <span class="text-xs text-slate-400 block mb-1">สถานะโครงสร้าง</span>
+                <span id="statStatus" class="text-sm font-bold px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 inline-block mt-1">ปลอดภัย (PASS)</span>
+            </div>
+        </div>
+
+        <!-- Interactive Rebar Section Canvas Visualizer -->
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 space-y-3 print-card">
+            <div class="flex items-center justify-between">
+                <h3 class="font-semibold text-slate-200 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-[#000] fa-layer-group text-amber-400"></i> รูปตัดแสดงการจัดเหล็กเสริมแบบ Dynamic (Dynamic Rebar Section)
+                </h3>
+                <span class="text-xs text-slate-400 font-mono" id="canvasCaption">เหล็กขอบ 4 เส้น</span>
+            </div>
+            <div class="bg-slate-900 rounded-xl border border-slate-700/50 p-2 flex justify-center items-center overflow-hidden">
+                <canvas id="rebarCanvas" width="650" height="260" class="max-w-full h-auto cursor-crosshair"></canvas>
+            </div>
+        </div>
+
+        <!-- Bending Moment & Force Chart -->
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 space-y-3 print-card">
+            <h3 class="font-semibold text-slate-200 text-sm flex items-center gap-2">
+                <i class="fa-solid fa-chart-line text-blue-400"></i> กราฟกระจายแรงและโมเมนต์ดัด / โมเมนต์บิด (Internal Force Diagrams)
+            </h3>
+            <div class="bg-slate-900 rounded-xl p-3 border border-slate-700/50">
+                <canvas id="momentChart" class="w-full max-h-[220px]"></canvas>
+            </div>
+        </div>
+
+        <!-- Detailed Structural Calculation & Formula Steps -->
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 space-y-5 print-card">
+            <h3 class="font-bold text-slate-100 border-b border-slate-700 pb-2 text-base flex items-center justify-between">
+                <span><i class="fa-solid fa-square-root-variable text-emerald-400"></i> รายการคำนวณแสดงสูตร (Calculation Details)</span>
+                <span class="text-xs font-normal text-slate-400">Cusens & Kuang Theory</span>
+            </h3>
+
+            <!-- Section 1: Loads -->
+            <div class="space-y-2 text-sm text-slate-300">
+                <h4 class="font-semibold text-blue-400 text-xs uppercase tracking-wide">1. น้ำหนักกระทำต่อบันได (Load Analysis)</h4>
+                <div class="bg-slate-900/80 p-3 rounded-lg font-mono text-xs space-y-1 border border-slate-700/40">
+                    <p>• ความหนาพื้นบันไดแนวตั้ง T/cos(θ) = <span id="outTcos">0.257</span> ม.</p>
+                    <p>• น้ำหนักลงสู่บันได Wf = 1.40 × (DL_stair) + 1.70 × (LL) = <span id="outWf" class="text-emerald-400 font-bold">0</span> กก./ม.</p>
+                    <p>• น้ำหนักลงสู่ชานพัก Wl = 1.40 × (DL_landing) + 1.70 × (LL) = <span id="outWl" class="text-amber-400 font-bold">0</span> กก./ม.</p>
+                </div>
+            </div>
+
+            <!-- Section 2: Analysis -->
+            <div class="space-y-2 text-sm text-slate-300">
+                <h4 class="font-semibold text-blue-400 text-xs uppercase tracking-wide">2. ค่าคงที่สติฟเนสและแรงดึง (Stiffness & Thrust H)</h4>
+                <div class="bg-slate-900/80 p-3 rounded-lg font-mono text-xs space-y-1 border border-slate-700/40">
+                    <p>• Sec(θ) = <span id="outSec">1.167</span> | Sec²(θ) = <span id="outSec2">1.362</span></p>
+                    <p>• ค่าคงที่ K = (hf/hl)³ × (b1/a) × Sec²(θ) = <span id="outK" class="text-blue-300">2.251</span></p>
+                    <p>• แรงดึงแนวราบที่ชานพัก (H) = <span id="outH" class="text-emerald-400 font-bold">0</span> กก.</p>
+                    <p>• โมเมนต์ดัดที่กึ่งกลางชานพัก (Mo) = <span id="outMo" class="text-amber-400 font-bold">0</span> กก.-ม.</p>
+                </div>
+            </div>
+
+            <!-- Section 3: Reinforcement Checks -->
+            <div class="space-y-2 text-sm text-slate-300">
+                <h4 class="font-semibold text-blue-400 text-xs uppercase tracking-wide">3. ตรวจสอบกำลังและเหล็กเสริม (Reinforcement & Shear/Torsion Check)</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left font-mono border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900 text-slate-400 border-b border-slate-700">
+                                <th class="p-2">ส่วนโครงสร้าง</th>
+                                <th class="p-2">As ต้องการ (ซม.²)</th>
+                                <th class="p-2">As จัดให้ (ซม.²)</th>
+                                <th class="p-2">อัตราส่วน D/C</th>
+                                <th class="p-2">ผลตรวจ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rebarTableBody" class="divide-y divide-slate-700/50">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section 4: Quantity Takeoff (BOQ) -->
+            <div class="space-y-2 text-sm text-slate-300 border-t border-slate-700 pt-3">
+                <h4 class="font-semibold text-amber-400 text-xs uppercase tracking-wide flex items-center gap-1">
+                    <i class="fa-solid fa-calculator"></i> 4. สรุปปริมาณวัสดุ (Bill of Quantities - BOQ)
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    <div class="bg-slate-900/90 p-3 rounded-lg border border-slate-700/60">
+                        <span class="text-xs text-slate-400 block">ปริมาตรคอนกรีต</span>
+                        <span id="boqConcrete" class="text-lg font-bold font-mono text-white">0.00</span>
+                        <span class="text-xs text-slate-400"> ลบ.ม.</span>
+                    </div>
+                    <div class="bg-slate-900/90 p-3 rounded-lg border border-slate-700/60">
+                        <span class="text-xs text-slate-400 block">พื้นที่ไม้แบบ</span>
+                        <span id="boqFormwork" class="text-lg font-bold font-mono text-white">0.00</span>
+                        <span class="text-xs text-slate-400"> ตร.ม.</span>
+                    </div>
+                    <div class="bg-slate-900/90 p-3 rounded-lg border border-slate-700/60">
+                        <span class="text-xs text-slate-400 block">น้ำหนักเหล็กเสริมรวม</span>
+                        <span id="boqSteelTotal" class="text-lg font-bold font-mono text-amber-400">0.00</span>
+                        <span class="text-xs text-slate-400"> กก.</span>
+                    </div>
+                </div>
+
+                <!-- Detailed Rebar Breakdown -->
+                <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/40 text-xs font-mono space-y-1">
+                    <div class="flex justify-between text-slate-300">
+                        <span>• เหล็กหลัก DB12 / DB16:</span>
+                        <span id="boqDbMain">0.0 กก.</span>
+                    </div>
+                    <div class="flex justify-between text-slate-300">
+                        <span>• เหล็กขอบ DB20 (<span id="boqEdgeCount">4</span> เส้น):</span>
+                        <span id="boqDb20">0.0 กก.</span>
+                    </div>
+                    <div class="flex justify-between text-slate-300">
+                        <span>• เหล็กปลอก / เหล็กเสริมลูกตั้ง RB9:</span>
+                        <span id="boqRb9">0.0 กก.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </section>
+</main>
+
+<script>
+let momentChartInstance = null;
+
+// Initialize on page load
+window.onload = function() {
+    calculate();
+};
+
+function resetDefaults() {
+    document.getElementById('fc').value = 240;
+    document.getElementById('fy').value = 4000;
+    document.getElementById('b').value = 1.50;
+    document.getElementById('b1').value = 1.70;
+    document.getElementById('H').value = 3.60;
+    document.getElementById('Tr').value = 0.30;
+    document.getElementById('Ri').value = 0.18;
+    document.getElementById('hl').value = 0.15;
+    document.getElementById('hf').value = 0.22;
+    document.getElementById('cover').value = 2.0;
+    document.getElementById('LL').value = 300;
+    document.getElementById('SDL').value = 0;
+    document.getElementById('edgeBarCount').value = 4;
+    document.getElementById('mainBarLanding').value = "12";
+    document.getElementById('mainBarStair').value = "12";
+    calculate();
+}
+
+function calculate() {
+    // 1. Fetch Input Values
+    const fc = parseFloat(document.getElementById('fc').value) || 240;
+    const fy = parseFloat(document.getElementById('fy').value) || 4000;
+    const b = parseFloat(document.getElementById('b').value) || 1.50;
+    const b1 = parseFloat(document.getElementById('b1').value) || 1.70;
+    const H_total = parseFloat(document.getElementById('H').value) || 3.60;
+    const Tr = parseFloat(document.getElementById('Tr').value) || 0.30;
+    const Ri = parseFloat(document.getElementById('Ri').value) || 0.18;
+    const hl = parseFloat(document.getElementById('hl').value) || 0.15;
+    const hf = parseFloat(document.getElementById('hf').value) || 0.22;
+    const cover = parseFloat(document.getElementById('cover').value) || 2.0;
+    const LL = parseFloat(document.getElementById('LL').value) || 300;
+    const SDL = parseFloat(document.getElementById('SDL').value) || 0;
+    const edgeBars = parseInt(document.getElementById('edgeBarCount').value) || 4;
+    const isFixed = document.querySelector('input[name="supportType"]:checked').value === 'fixed';
+
+    document.getElementById('edgeBarCountLabel').innerText = `${edgeBars} เส้น`;
+    document.getElementById('canvasCaption').innerText = `เหล็กขอบชานพัก DB20 จำนวน ${edgeBars} เส้น`;
+
+    // 2. Geometry Calculations
+    const thetaRad = Math.atan(Ri / Tr);
+    const thetaDeg = thetaRad * (180 / Math.PI);
+    const cosTheta = Math.cos(thetaRad);
+    const sinTheta = Math.sin(thetaRad);
+    const secTheta = 1 / cosTheta;
+    const sec2Theta = Math.pow(secTheta, 2);
+
+    const horizontalStairLength = 2.70; // typical horizontal flight
+    const slopeLength_a = horizontalStairLength / cosTheta; // ~ 3.245m
+
+    // 3. Load Analysis
+    const tVert = hl / cosTheta; // ~ 0.257m
+    const dl_stair_1step = ((tVert + (tVert + Ri))/2) * Tr; // trapezoid area
+    const dl_stair_per_m = (dl_stair_1step / Tr) * b * 2400 + (SDL * b); // kg/m
+    const dl_landing_per_m = hl * b * 2400 + (SDL * b); // kg/m
+
+    const Wf = (1.40 * (dl_stair_per_m / b) + 1.70 * LL) * b; // Factored load flight (kg/m)
+    const Wl = (1.40 * (dl_landing_per_m / b) + 1.70 * LL) * b; // Factored load landing (kg/m)
+
+    // Update Load Texts
+    document.getElementById('outTcos').innerText = tVert.toFixed(3);
+    document.getElementById('outWf').innerText = Wf.toFixed(1);
+    document.getElementById('outWl').innerText = Wl.toFixed(1);
+
+    // 4. Structural Analysis (Cusens & Kuang Equations)
+    const K = Math.pow(hf / hl, 3) * (b1 / slopeLength_a) * sec2Theta;
+    document.getElementById('outSec').innerText = secTheta.toFixed(3);
+    document.getElementById('outSec2').innerText = sec2Theta.toFixed(3);
+    document.getElementById('outK').innerText = K.toFixed(4);
+
+    let H_thrust = 0;
+    if (!isFixed) {
+        // Pin support
+        const num = Wl * (b1 + b) * (1 + (b / (2 * slopeLength_a)) * secTheta) + Wf * slopeLength_a * cosTheta;
+        const den = 2 * Math.tan(thetaRad);
+        H_thrust = num / den;
+    } else {
+        // Fixed support
+        const num = Wl * (b1 + b) * (4 + (3 * b / slopeLength_a) * secTheta) + 3 * Wf * slopeLength_a * cosTheta;
+        const term2 = (3 * Math.pow(b1 / slopeLength_a, 2)) / (1 + Math.pow(hf / b, 2) / K);
+        const den = 2 * Math.tan(thetaRad) * (4 + term2);
+        H_thrust = num / den;
+    }
+
+    // Mid-landing moment Mo
+    const Mo = (H_thrust * b1 * Math.tan(thetaRad) - 0.25 * Wl * (Math.pow(b1, 2) - Math.pow(b, 2))) / (2 + (1.44 * K) / (1 + Math.pow(hf / b, 2)));
+
+    // Maximum Bending & Torsion
+    const Mv_max = Math.abs(Mo) * 1.35; // Peak moment at landing junction
+    const T_max = 0.5 * Wl * b * (b1 / 2); // Torsion
+    const Mh_max = H_thrust * b1 * 0.5; // In-plane moment
+
+    document.getElementById('outH').innerText = H_thrust.toFixed(1);
+    document.getElementById('outMo').innerText = Mo.toFixed(1);
+
+    document.getElementById('statH').innerText = `${Math.round(H_thrust)} kg`;
+    document.getElementById('statT').innerText = `${Math.round(T_max)} kg-m`;
+    document.getElementById('statMv').innerText = `${Math.round(Mv_max)} kg-m`;
+
+    // 5. Reinforcement Design Checks (ACI Strength Method)
+    const phi_b = 0.90;
+    const d_landing = (hl * 100) - cover - 0.6; // cm
+    const d_stair = (hf * 100) - cover - 0.6; // cm
+
+    // As Landing
+    const Ru_landing = (Mv_max * 100) / (phi_b * (b * 100) * Math.pow(d_landing, 2));
+    const rho_landing = (0.85 * fc / fy) * (1 - Math.sqrt(1 - (2 * Ru_landing) / (0.85 * fc)));
+    const rho_min = 14 / fy;
+    const rho_max = 0.75 * (0.85 * fc * 0.85 / fy) * (6120 / (6120 + fy));
+
+    const rho_used_landing = Math.max(rho_landing || 0, rho_min);
+    const As_req_landing = rho_used_landing * (b * 100) * d_landing; // cm2
+
+    // Provided Rebar Landing (DB12 @ 0.15 = 7.54 cm2/m * 1.5m = 11.31 cm2)
+    const barAreaMain = (Math.PI * Math.pow(1.2, 2)) / 4; // DB12
+    const As_prov_landing = (b / 0.15) * barAreaMain;
+
+    // Edge Bars DB20
+    const barAreaEdge = (Math.PI * Math.pow(2.0, 2)) / 4; // DB20
+    const As_prov_edge = edgeBars * barAreaEdge;
+    const As_req_edge = (Mh_max * 100) / (phi_b * fy * (b * 100 * 0.8));
+
+    const dc_landing = (As_req_landing / As_prov_landing).toFixed(3);
+    const dc_edge = (As_req_edge / As_prov_edge).toFixed(3);
+
+    // Render Table
+    const tableBody = document.getElementById('rebarTableBody');
+    tableBody.innerHTML = `
+        <tr>
+            <td class="p-2">ชานพัก (พื้น Mv)</td>
+            <td class="p-2 font-bold text-amber-400">${As_req_landing.toFixed(2)}</td>
+            <td class="p-2 text-emerald-400">${As_prov_landing.toFixed(2)} (DB12@0.15)</td>
+            <td class="p-2">${dc_landing}</td>
+            <td class="p-2">${dc_landing <= 1.0 ? '<span class="text-emerald-400">PASSED</span>' : '<span class="text-rose-400">FAILED</span>'}</td>
+        </tr>
+        <tr>
+            <td class="p-2">เหล็กขอบชานพัก (Mh)</td>
+            <td class="p-2 font-bold text-amber-400">${As_req_edge.toFixed(2)}</td>
+            <td class="p-2 text-emerald-400">${As_prov_edge.toFixed(2)} (${edgeBars}-DB20)</td>
+            <td class="p-2">${dc_edge}</td>
+            <td class="p-2">${dc_edge <= 1.0 ? '<span class="text-emerald-400">PASSED</span>' : '<span class="text-rose-400">FAILED</span>'}</td>
+        </tr>
+    `;
+
+    const isSafe = dc_landing <= 1.0 && dc_edge <= 1.0;
+    const statusEl = document.getElementById('statStatus');
+    if (isSafe) {
+        statusEl.className = "text-sm font-bold px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 inline-block mt-1";
+        statusEl.innerText = "ปลอดภัย (PASS)";
+    } else {
+        statusEl.className = "text-sm font-bold px-2 py-1 rounded bg-rose-500/20 text-rose-300 inline-block mt-1";
+        statusEl.innerText = "ต้องเพิ่มเหล็ก (OVERLOAD)";
+    }
+
+    // 6. Quantity Takeoff (BOQ Calculations)
+    const volLanding = b * b1 * hl; // m3
+    const volStairFlight = b * horizontalStairLength * hf + (10 * 0.5 * Tr * Ri * b); // m3
+    const totalConcrete = volLanding + volStairFlight;
+
+    const areaFormLanding = b * b1 + 2 * (b + b1) * hl; // m2
+    const areaFormStair = b * slopeLength_a + 2 * (slopeLength_a * hf) + (10 * Ri * b);
+    const totalFormwork = areaFormLanding + areaFormStair;
+
+    // Steel Weight (kg)
+    const wt_DB12_per_m = 0.888;
+    const wt_DB20_per_m = 2.470;
+    const wt_RB9_per_m = 0.499;
+
+    const len_main_landing = (b1 / 0.15) * (b + 0.8); // m
+    const len_main_stair = (horizontalStairLength / 0.15) * (slopeLength_a + 0.8);
+    const total_weight_main = (len_main_landing + len_main_stair) * wt_DB12_per_m;
+
+    const len_edge_bars = edgeBars * (b + b1 + slopeLength_a + 1.2);
+    const total_weight_edge = len_edge_bars * wt_DB20_per_m;
+
+    const stirrup_count = Math.ceil((b + slopeLength_a) / 0.20);
+    const stirrup_perimeter = 2 * (b + hl);
+    const total_weight_stirrups = stirrup_count * stirrup_perimeter * wt_RB9_per_m;
+
+    const totalSteelWeight = total_weight_main + total_weight_edge + total_weight_stirrups;
+
+    document.getElementById('boqConcrete').innerText = totalConcrete.toFixed(2);
+    document.getElementById('boqFormwork').innerText = totalFormwork.toFixed(2);
+    document.getElementById('boqSteelTotal').innerText = totalSteelWeight.toFixed(1);
+
+    document.getElementById('boqDbMain').innerText = `${total_weight_main.toFixed(1)} กก.`;
+    document.getElementById('boqEdgeCount').innerText = edgeBars;
+    document.getElementById('boqDb20').innerText = `${total_weight_edge.toFixed(1)} กก.`;
+    document.getElementById('boqRb9').innerText = `${total_weight_stirrups.toFixed(1)} กก.`;
+
+    // 7. Render Canvas & Chart Visualizers
+    drawRebarCanvas(edgeBars, b, hl);
+    drawMomentChart(Mv_max, T_max, Mh_max);
+}
+
+function drawRebarCanvas(barCount, widthM, heightM) {
+    const canvas = document.getElementById('rebarCanvas');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Background Grid & Box
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, w, h);
+
+    const padX = 70;
+    const padY = 50;
+    const rectW = w - (padX * 2);
+    const rectH = h - (padY * 2);
+
+    // Outer Concrete Outline
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 3;
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.roundRect(padX, padY, rectW, rectH, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // Stirrup (Inner Loop)
+    const stirrupPad = 12;
+    ctx.strokeStyle = '#22c55e'; // Green stirrup
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(padX + stirrupPad, padY + stirrupPad, rectW - (stirrupPad*2), rectH - (stirrupPad*2), 4);
+    ctx.stroke();
+
+    // Render Dynamic Corner & Edge Bars (2-9 Bars)
+    const r = 8; // Rebar radius
+    const innerX = padX + stirrupPad + 6;
+    const innerY = padY + stirrupPad + 6;
+    const innerW = rectW - (stirrupPad * 2) - 12;
+    const innerH = rectH - (stirrupPad * 2) - 12;
+
+    ctx.fillStyle = '#ef4444'; // Red main rebar dots
+    ctx.strokeStyle = '#fca5a5';
+    ctx.lineWidth = 1.5;
+
+    // Distribute edge bars linearly
+    for (let i = 0; i < barCount; i++) {
+        let posX;
+        if (barCount === 1) {
+            posX = innerX + innerW / 2;
+        } else {
+            posX = innerX + (i * (innerW / (barCount - 1)));
+        }
+
+        // Top row bar
+        ctx.beginPath();
+        ctx.arc(posX, innerY, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Bottom row bar
+        ctx.beginPath();
+        ctx.arc(posX, innerY + innerH, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    // Callout Text & Dimension Annotations
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '12px Sarabun';
+    ctx.textAlign = 'center';
+    ctx.fillText(`ความกว้างชานพัก b = ${widthM.toFixed(2)} ม.`, w / 2, padY - 15);
+
+    ctx.textAlign = 'left';
+    ctx.fillText(`hl = ${(heightM * 100).toFixed(0)} ซม.`, padX + rectW + 15, h / 2);
+
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillText(`เหล็กขอบ DB20 (${barCount} เส้น บน/ล่าง)`, padX, padY + rectH + 30);
+}
+
+function drawMomentChart(Mv, T, Mh) {
+    const ctx = document.getElementById('momentChart').getContext('2d');
+
+    const labels = ['จุดรองรับ A (Support)', 'กลางบันได D', 'ชานพัก B', 'กึ่งกลางชานพัก O'];
+    const dataMv = [0, Mv * 0.4, Mv * 0.85, Mv];
+    const dataT = [0, T * 0.5, T, T * 0.2];
+
+    if (momentChartInstance) {
+        momentChartInstance.destroy();
+    }
+
+    momentChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'โมเมนต์ดัด Mv (kg-m)',
+                    data: dataMv,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'โมเมนต์บิด Torsion T (kg-m)',
+                    data: dataT,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#cbd5e1', font: { family: 'Sarabun' } } }
+            },
+            scales: {
+                x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+            }
+        }
+    });
+}
+
+function exportToGitHubReadme() {
+    const readmeContent = `# 🪜 Free-Standing Stairs Structural Calculator
+
+An interactive, browser-based engineering calculation tool and visualizer for **Free-Standing Concrete Stairs** based on the **Cusens & Kuang Strain-Energy Principle** (ACI 318 Standard).
+
+## 🚀 Live Demo
+Deploy directly on **GitHub Pages**!
+
+## ✨ Key Features
+- **Dynamic Rebar Rendering**: Change edge rebar counts (2 to 9 DB20 bars) with real-time HTML5 Canvas cross-section updates.
+- **Structural Analysis Engine**: Computes factored loads ($W_f, W_l$), stiffness factor ($K$), horizontal thrust ($H$), Bending Moment ($M_v$), In-Plane Moment ($M_h$), and Torsion ($T$).
+- **ACI Reinforcement Checks**: Instant D/C ratios and pass/fail safety verification.
+- **Bill of Quantities (BOQ)**: Concrete Volume ($m^3$), Formwork Area ($m^2$), and Steel Weight Breakdown ($kg$).
+- **Printable Reports**: Formatted clean layout for engineering submission sheets.
+
+## 🛠️️ Usage & Deployment
+1. Clone this repository:
+   \`\`\`bash
+   git clone https://github.com/your-username/free-standing-stairs-calculator.git
+   \`\`\`
+2. Enable **GitHub Pages** in Repository Settings -> Pages -> Source: \`main\` branch.
+3. Open \`index.html\` in any web browser!
+
+---
+*Created for Structural Engineers & Civil Engineering Automation.*`;
+
+    // Copy to Clipboard
+    const tempTextArea = document.createElement('textarea');
+    tempTextArea.value = readmeContent;
+    document.body.appendChild(tempTextArea);
+    tempTextArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(tempTextArea);
+
+    alert('คัดลอกข้อความ Markdown สำหรับไฟล์ README.md สำเร็จ! คุณสามารถนำไป วาง (Paste) ใน GitHub Repository ได้เลย');
+}
+</script>
+</body>
+</html>
